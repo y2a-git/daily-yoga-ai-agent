@@ -1,4 +1,4 @@
-# 🧘 Daily Yoga AI Agent (Free & Cross-Platform)
+# 🧘 Daily Yoga AI App (Free & Cross-Platform)
 
 An open-source, **100% free AI Yoga & Mobility Coach** that creates safe, step-by-step Yoga routines with pose illustrations tailored for **any age** (Kids, Teens, Adults, Seniors, and Chair-Assisted Care).
 

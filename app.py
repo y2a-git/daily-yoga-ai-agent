@@ -1,12 +1,9 @@
-import html
 import json
 import os
-import random
 import re
 import socket
 import threading
 import time
-import urllib.error
 import urllib.parse
 import urllib.request
 import webbrowser
@@ -17,7 +14,7 @@ CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 SESSIONS_FILE = os.path.join(BASE_DIR, "saved_sessions.json")
 
 DEFAULT_CONFIG = {
-    "provider": "free_no_key",  # "free_no_key" or "gemini_free"
+    "provider": "free_no_key",
     "gemini_api_key": "",
     "pollinations_api_key": "",
 }
@@ -46,7 +43,6 @@ def get_config():
 
 def extract_json_object(raw_text):
     text = raw_text.strip()
-    # Strip markdown code fences if present
     text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
     text = re.sub(r"\s*```$", "", text)
     try:
@@ -70,7 +66,7 @@ Number of Poses Required: {pose_count}
 
 Rules:
 1. Tailor every pose, hold time, and safety cue specifically for {age_group}.
-2. Keep instructions simple, encouraging, jargon-free, and safe to practice at home without special equipment (a sturdy chair or wall is okay if helpful for seniors/kids).
+2. Keep instructions simple, encouraging, jargon-free, and safe to practice at home without special equipment.
 3. Return ONLY valid JSON matching this exact schema (no markdown, no extra commentary):
 
 {{
@@ -91,7 +87,7 @@ Rules:
     {{
       "english_name": "Simple Pose Name",
       "sanskrit_name": "Traditional Name",
-      "pose_category": "one of: mountain, tree, cat_cow, seated_twist, child, warrior, cobra, chair, legs_wall",
+      "pose_category": "one of: mountain, tree, cat_cow, seated_twist, child, warrior",
       "duration_seconds": 30,
       "duration_label": "30 seconds (about 4 slow breaths)",
       "benefit": "Clear 1-sentence benefit",
@@ -101,7 +97,7 @@ Rules:
         "Step 3: How to hold and breathe comfortably"
       ],
       "age_modification": "Specific tip or prop modification for {age_group}",
-      "image_prompt": "friendly educational yoga illustration of a {age_group} person safely practicing [pose], peaceful sunlit room, soft pastel watercolor and clean vector art style, full body clear posture, no text"
+      "image_prompt": "friendly educational yoga illustration of a {age_group} person safely practicing yoga pose, peaceful sunlit room, soft pastel watercolor and clean vector art style, full body clear posture, no text"
     }}
   ],
   "daily_wellness_tip": "One practical, uplifting daily habit or hydration/posture tip for {age_group}"
@@ -157,7 +153,7 @@ def call_pollinations_free(prompt):
             method="GET",
         )
         try:
-            with urllib.request.urlopen(req, timeout=35) as resp:
+            with urllib.request.urlopen(req, timeout=25) as resp:
                 raw = resp.read().decode("utf-8")
                 return extract_json_object(raw)
         except Exception as e:
@@ -255,7 +251,7 @@ def built_in_curated_routine(age_group, goal, pose_count, custom_note):
         "age_group": age_group,
         "goal": goal,
         "safety_note": (
-            f"Move slowly within a pain-free range. Keep a sturdy chair or wall nearby for balance"
+            "Move slowly within a pain-free range. Keep a sturdy chair or wall nearby for balance"
             + (f" — tailored with your note in mind: '{custom_note}'." if custom_note else ".")
         ),
         "breathing_warmup": {
@@ -277,13 +273,11 @@ def built_in_curated_routine(age_group, goal, pose_count, custom_note):
 def generate_yoga_routine(age_group, goal, pose_count, custom_note):
     cfg = get_config()
     prompt = build_prompt(age_group, goal, pose_count, custom_note)
-    source_used = "Built-In Smart Yoga Coach"
 
     if cfg.get("provider") == "gemini_free" and cfg.get("gemini_api_key", "").strip():
         try:
             routine = call_gemini_free(prompt, cfg["gemini_api_key"])
-            source_used = "Google Gemini Free Tier"
-            routine["_source"] = source_used
+            routine["_source"] = "Google Gemini Free Tier"
             return routine
         except Exception:
             pass
@@ -297,7 +291,7 @@ def generate_yoga_routine(age_group, goal, pose_count, custom_note):
         pass
 
     routine = built_in_curated_routine(age_group, goal, pose_count, custom_note)
-    routine["_source"] = source_used
+    routine["_source"] = "Built-In Smart Yoga Coach"
     return routine
 
 
@@ -345,22 +339,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
       justify-content: space-between;
       gap: 12px;
     }
-    .brand h1 {
-      margin: 0;
-      font-size: 1.55em;
-      letter-spacing: -0.01em;
-    }
-    .brand p {
-      margin: 4px 0 0;
-      opacity: 0.92;
-      font-size: 0.95em;
-    }
-    .top-controls {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
+    .brand h1 { margin: 0; font-size: 1.55em; letter-spacing: -0.01em; }
+    .brand p { margin: 4px 0 0; opacity: 0.92; font-size: 0.95em; }
+    .top-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .pill-btn {
       background: rgba(255,255,255,0.16);
       color: #fff;
@@ -372,17 +353,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
       font-size: 0.9em;
     }
     .pill-btn:hover { background: rgba(255,255,255,0.28); }
-    .container {
-      max-width: 1040px;
-      margin: 24px auto 60px;
-      padding: 0 18px;
-    }
-    .tabs {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
+    .container { max-width: 1040px; margin: 24px auto 60px; padding: 0 18px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
     .tab-btn {
       padding: 11px 18px;
       border-radius: 12px;
@@ -393,11 +365,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
       cursor: pointer;
       font-size: 0.98em;
     }
-    .tab-btn.active {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-    }
+    .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -406,17 +374,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
       box-shadow: 0 4px 16px rgba(31,45,41,0.04);
       margin-bottom: 20px;
     }
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-      gap: 16px;
-    }
-    label {
-      display: block;
-      font-weight: 700;
-      margin-bottom: 6px;
-      font-size: 0.95em;
-    }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+    label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 0.95em; }
     select, input[type="text"], input[type="password"] {
       width: 100%;
       padding: 11px 13px;
@@ -459,12 +418,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
       padding: 14px 16px;
       margin: 14px 0;
     }
-    .warmup-box {
-      background: var(--accent);
-      border-radius: 12px;
-      padding: 16px 18px;
-      margin-bottom: 20px;
-    }
+    .warmup-box { background: var(--accent); border-radius: 12px; padding: 16px 18px; margin-bottom: 20px; }
     .pose-card {
       display: grid;
       grid-template-columns: 310px 1fr;
@@ -476,9 +430,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
       margin-bottom: 18px;
       background: #fff;
     }
-    @media (max-width: 780px) {
-      .pose-card { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 780px) { .pose-card { grid-template-columns: 1fr; } }
     .pose-visual {
       width: 100%;
       border-radius: 12px;
@@ -489,14 +441,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
     }
-    .pose-visual img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
+    .pose-visual img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .badge {
       display: inline-block;
       background: var(--accent);
@@ -506,13 +452,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
       font-size: 0.84em;
       font-weight: 700;
     }
-    .steps-list {
-      padding-left: 20px;
-      margin: 10px 0;
-    }
-    .steps-list li {
-      margin-bottom: 7px;
-    }
+    .steps-list { padding-left: 20px; margin: 10px 0; }
+    .steps-list li { margin-bottom: 7px; }
     .mod-tip {
       background: #f4f8f6;
       border-left: 4px solid var(--primary);
@@ -521,19 +462,8 @@ HTML_PAGE = r"""<!DOCTYPE html>
       font-size: 0.94em;
       margin-top: 10px;
     }
-    .timer-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 12px;
-      flex-wrap: wrap;
-    }
-    .timer-display {
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-      color: var(--primary-dark);
-      font-size: 1.05em;
-    }
+    .timer-bar { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+    .timer-display { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--primary-dark); font-size: 1.05em; }
     .hidden { display: none; }
     .saved-item {
       display: flex;
@@ -575,7 +505,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
       <button id="tab-settings" class="tab-btn" onclick="switchTab('settings')">🔑 Free API Setup (Optional)</button>
     </div>
 
-    <!-- PRACTICE TAB -->
     <div id="view-practice">
       <div id="generator-card" class="card">
         <h2 style="margin-top:0;">Personalize Today's Yoga Session</h2>
@@ -618,11 +547,9 @@ HTML_PAGE = r"""<!DOCTYPE html>
           🧘 Generate My Yoga Routine & Illustrations
         </button>
       </div>
-
       <div id="routine-output" class="hidden"></div>
     </div>
 
-    <!-- SAVED ROUTINES TAB -->
     <div id="view-saved" class="hidden">
       <div class="card">
         <h2 style="margin-top:0;">Saved Yoga Routines</h2>
@@ -631,7 +558,6 @@ HTML_PAGE = r"""<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- SETTINGS TAB -->
     <div id="view-settings" class="hidden">
       <div class="card">
         <h2 style="margin-top:0;">100% Free AI Configuration</h2>
@@ -694,14 +620,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
       const colors = ["#d8ebe4", "#e3eef8", "#f6ead9", "#e9e4f5", "#dcefe6"];
       const bg = colors[index % colors.length];
 
-      // Clean vector stick-figure yoga illustrations per pose category
       const figures = {
         mountain: `<circle cx="150" cy="48" r="12" fill="#2f6f5e"/><path d="M150 62 L150 112 M150 74 L125 40 M150 74 L175 40 M150 112 L136 162 M150 112 L164 162" stroke="#2f6f5e" stroke-width="6" stroke-linecap="round" fill="none"/>`,
         tree: `<circle cx="150" cy="48" r="12" fill="#2f6f5e"/><path d="M150 62 L150 112 M150 75 L132 58 L150 44 M150 75 L168 58 L150 44 M150 112 L150 164 M150 112 L174 132 L152 142" stroke="#2f6f5e" stroke-width="6" stroke-linecap="round" fill="none"/>`,
         cat_cow: `<circle cx="96" cy="95" r="11" fill="#2f6f5e"/><path d="M108 102 Q150 78 192 104 M115 103 L112 152 M186 105 L190 152" stroke="#2f6f5e" stroke-width="6" stroke-linecap="round" fill="none"/>`,
         seated_twist: `<circle cx="150" cy="56" r="12" fill="#2f6f5e"/><path d="M150 70 L150 124 M150 86 L122 104 M150 86 L180 96 M150 124 L118 148 L155 154 M150 124 L182 148 L145 154" stroke="#2f6f5e" stroke-width="6" stroke-linecap="round" fill="none"/>`,
-        child: `<circle cx="102" cy="136" r="11" fill="#2f6f5e"/><path d="M114 136 Q152 114 186 138 L164 152 L198 152 M112 144 L76 148" stroke="#2f6f5e" stroke-width="6" stroke-linecap="round" fill="none"/>`,
-        warrior: `<circle cx="150" cy="52" r="12" fill="#2f6f5e"/><path d="M150 66 L150 112 M102 80 L198 80 M150 112 L116 132 L112 164 M150 112 L192 164" stroke="#2f6f5e" stroke-width="6" stroke-linecap="round" fill="none"/>`
+        child: `<circle cx="102" cy="136" r="11" fill="#2f6f5e"/><path d="M114 136 Q152 114 186 138 L164 152 L198 152 M112 144 L76 148" stroke="#2f6f5e" stroke-width="6" stroke-linecap="round" fill="none"/>`
       };
       const figure = figures[cat] || figures.mountain;
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200">
@@ -746,4 +670,320 @@ HTML_PAGE = r"""<!DOCTYPE html>
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = "sine
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(528, ctx.currentTime);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.1);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 1.1);
+      } catch (e) {}
+    }
+
+    function renderRoutine(routine) {
+      currentRoutine = routine;
+      const container = document.getElementById("routine-output");
+      container.classList.remove("hidden");
+
+      const warmupSteps = (routine.breathing_warmup?.steps || [])
+        .map(s => `<li>${escapeHtml(s)}</li>`).join("");
+
+      const posesHtml = (routine.poses || []).map((pose, idx) => {
+        const imgPrompt = pose.image_prompt || `gentle yoga pose ${pose.english_name} for ${routine.age_group}, soft watercolor illustration`;
+        const imgUrl = `/api/pose-image?prompt=${encodeURIComponent(imgPrompt)}&seed=${idx + 101}`;
+        const steps = (pose.easy_steps || []).map(st => `<li>${escapeHtml(st)}</li>`).join("");
+        const secs = parseInt(pose.duration_seconds, 10) || 30;
+
+        return `
+          <div class="pose-card">
+            <div class="pose-visual">
+              <img src="${imgUrl}" alt="${escapeHtml(pose.english_name)}" onerror="handlePoseImgError(this, ${idx})" />
+            </div>
+            <div>
+              <span class="badge">Pose ${idx + 1} • ${escapeHtml(pose.duration_label || secs + " seconds")}</span>
+              <h3 style="margin:8px 0 4px;">${escapeHtml(pose.english_name)} <span style="font-weight:400;color:var(--muted);">(${escapeHtml(pose.sanskrit_name || "")})</span></h3>
+              <p style="margin:4px 0 8px;color:var(--primary-dark);font-weight:600;">✨ ${escapeHtml(pose.benefit)}</p>
+              <ol class="steps-list">${steps}</ol>
+              <div class="mod-tip">
+                <strong>Age-Friendly Tip:</strong> ${escapeHtml(pose.age_modification)}
+              </div>
+              <div class="timer-bar no-print">
+                <button class="secondary-btn" onclick="startPoseTimer(${idx}, ${secs})">⏱️ Start ${secs}s Hold Timer</button>
+                <span id="timer-val-${idx}" class="timer-display"></span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      container.innerHTML = `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+            <div>
+              <span class="badge">${escapeHtml(routine.age_group)} • ${escapeHtml(routine._source || "AI Yoga Coach")}</span>
+              <h2 style="margin:8px 0 4px;">${escapeHtml(routine.session_title)}</h2>
+            </div>
+            <div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="secondary-btn" onclick="saveCurrentRoutine()">💾 Save Routine</button>
+              <button class="secondary-btn" onclick="window.print()">🖨️ Print / PDF</button>
+            </div>
+          </div>
+
+          <div class="safety-box">
+            <strong>🛡️ Safety First:</strong> ${escapeHtml(routine.safety_note)}
+          </div>
+
+          <div class="warmup-box">
+            <h3 style="margin:0 0 6px;">🌬️ Warm-Up: ${escapeHtml(routine.breathing_warmup?.name || "Calm Breathing")} (${escapeHtml(routine.breathing_warmup?.duration || "2 mins")})</h3>
+            <ol class="steps-list" style="margin-bottom:0;">${warmupSteps}</ol>
+          </div>
+
+          ${posesHtml}
+
+          <div class="safety-box" style="background:#eef6f3;border-color:#c2ddd3;margin-bottom:0;">
+            <strong>🌱 Daily Wellness Tip:</strong> ${escapeHtml(routine.daily_wellness_tip)}
+          </div>
+        </div>
+      `;
+      container.scrollIntoView({ behavior: "smooth" });
+    }
+
+    async function generateRoutine() {
+      const btn = document.getElementById("generate-btn");
+      btn.disabled = true;
+      btn.textContent = "⏳ Crafting your personalized Yoga routine & images...";
+
+      try {
+        const res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            age_group: document.getElementById("age-group").value,
+            goal: document.getElementById("goal").value,
+            pose_count: document.getElementById("pose-count").value,
+            custom_note: document.getElementById("custom-note").value.trim()
+          })
+        });
+        const data = await res.json();
+        renderRoutine(data);
+      } catch (err) {
+        alert("Could not generate routine. Please try again.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🧘 Generate My Yoga Routine & Illustrations";
+      }
+    }
+
+    async function saveCurrentRoutine() {
+      if (!currentRoutine) return;
+      const res = await fetch("/api/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(currentRoutine)
+      });
+      const data = await res.json();
+      document.getElementById("saved-count").textContent = data.count;
+      alert("✅ Routine saved! You can revisit it anytime in 'Saved Routines'.");
+    }
+
+    async function loadSavedRoutines() {
+      const res = await fetch("/api/saved");
+      const list = await res.json();
+      document.getElementById("saved-count").textContent = list.length;
+      const el = document.getElementById("saved-list");
+      if (!list.length) {
+        el.innerHTML = "<p>No saved routines yet. Create one and click <strong>Save Routine</strong>!</p>";
+        return;
+      }
+      el.innerHTML = list.map((item, idx) => `
+        <div class="saved-item">
+          <div>
+            <strong>${escapeHtml(item.session_title)}</strong><br/>
+            <small style="color:var(--muted);">${escapeHtml(item.age_group)} • ${escapeHtml(item.saved_at || "")}</small>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="secondary-btn" onclick="openSaved(${idx})">▶️ Open</button>
+            <button class="secondary-btn" onclick="deleteSaved(${idx})">🗑️</button>
+          </div>
+        </div>
+      `).join("");
+      window._savedCache = list;
+    }
+
+    function openSaved(idx) {
+      const item = window._savedCache[idx];
+      switchTab("practice");
+      renderRoutine(item);
+    }
+
+    async function deleteSaved(idx) {
+      await fetch("/api/delete-saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ index: idx })
+      });
+      loadSavedRoutines();
+    }
+
+    async function loadSettings() {
+      const res = await fetch("/api/config");
+      const cfg = await res.json();
+      document.getElementById("cfg-provider").value = cfg.provider || "free_no_key";
+      document.getElementById("cfg-gemini").value = cfg.gemini_api_key || "";
+      document.getElementById("cfg-pollinations").value = cfg.pollinations_api_key || "";
+    }
+
+    async function saveSettings() {
+      const payload = {
+        provider: document.getElementById("cfg-provider").value,
+        gemini_api_key: document.getElementById("cfg-gemini").value.trim(),
+        pollinations_api_key: document.getElementById("cfg-pollinations").value.trim()
+      };
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const st = document.getElementById("settings-status");
+      st.textContent = "✅ Settings saved!";
+      setTimeout(() => (st.textContent = ""), 3000);
+    }
+
+    loadSavedRoutines();
+  </script>
+</body>
+</html>
+"""
+
+
+class YogaAgentHandler(BaseHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass
+
+    def send_json(self, obj, status=200):
+        raw = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def read_json_body(self):
+        length = int(self.headers.get("Content-Length", 0))
+        if length == 0:
+            return {}
+        return json.loads(self.rfile.read(length).decode("utf-8"))
+
+    def do_GET(self):
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == "/":
+            page = HTML_PAGE.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(page)))
+            self.end_headers()
+            self.wfile.write(page)
+        elif parsed.path == "/api/config":
+            self.send_json(get_config())
+        elif parsed.path == "/api/saved":
+            self.send_json(load_json(SESSIONS_FILE, []))
+        elif parsed.path == "/api/pose-image":
+            params = urllib.parse.parse_qs(parsed.query)
+            prompt = params.get("prompt", ["gentle yoga pose illustration"])[0]
+            seed = params.get("seed", ["42"])[0]
+            self.proxy_free_image(prompt, seed)
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def proxy_free_image(self, prompt, seed):
+        cfg = get_config()
+        encoded = urllib.parse.quote(prompt[:400])
+        pk = cfg.get("pollinations_api_key", "").strip()
+
+        if pk:
+            url = f"https://gen.pollinations.ai/image/{encoded}?model=flux&width=768&height=512&seed={seed}&nologo=true"
+            headers = {"Authorization": f"Bearer {pk}", "User-Agent": "DailyYogaAIAgent/1.0"}
+        else:
+            url = f"https://image.pollinations.ai/prompt/{encoded}?width=768&height=512&seed={seed}&nologo=true"
+            headers = {"User-Agent": "DailyYogaAIAgent/1.0"}
+
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=22) as resp:
+                ctype = resp.headers.get("Content-Type", "image/jpeg")
+                if not ctype.startswith("image/"):
+                    raise ValueError("Non-image response")
+                img_bytes = resp.read()
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(img_bytes)))
+                self.end_headers()
+                self.wfile.write(img_bytes)
+        except Exception:
+            self.send_response(502)
+            self.end_headers()
+
+    def do_POST(self):
+        parsed = urllib.parse.urlparse(self.path)
+        body = self.read_json_body()
+
+        if parsed.path == "/api/generate":
+            routine = generate_yoga_routine(
+                age_group=body.get("age_group", "Adults (Ages 20-55)"),
+                goal=body.get("goal", "Morning Energy & Wake-Up"),
+                pose_count=body.get("pose_count", 4),
+                custom_note=body.get("custom_note", ""),
+            )
+            self.send_json(routine)
+        elif parsed.path == "/api/config":
+            cfg = get_config()
+            cfg.update(body)
+            save_json(CONFIG_FILE, cfg)
+            self.send_json({"ok": True})
+        elif parsed.path == "/api/save":
+            saved = load_json(SESSIONS_FILE, [])
+            body["saved_at"] = time.strftime("%Y-%m-%d %H:%M")
+            saved.insert(0, body)
+            save_json(SESSIONS_FILE, saved[:50])
+            self.send_json({"ok": True, "count": len(saved)})
+        elif parsed.path == "/api/delete-saved":
+            saved = load_json(SESSIONS_FILE, [])
+            idx = int(body.get("index", -1))
+            if 0 <= idx < len(saved):
+                saved.pop(idx)
+                save_json(SESSIONS_FILE, saved)
+            self.send_json({"ok": True})
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+
+def find_free_port(start=8765):
+    for port in range(start, start + 20):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(("127.0.0.1", port)) != 0:
+                return port
+    return start
+
+
+if __name__ == "__main__":
+    port = find_free_port(8765)
+    url = f"http://127.0.0.1:{port}"
+    server = ThreadingHTTPServer(("127.0.0.1", port), YogaAgentHandler)
+
+    print("=" * 56)
+    print("  Daily Yoga AI Agent is running!")
+    print(f"  Open in your browser: {url}")
+    print("  Keep this window open while practicing. Close to stop.")
+    print("=" * 56)
+
+    threading.Timer(0.8, lambda: webbrowser.open(url)).start()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nShutting down Daily Yoga AI Agent. Namaste!")
+        server.server_close()
+
+# === END OF app.py ===

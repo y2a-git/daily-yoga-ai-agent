@@ -1,5 +1,6 @@
 config.json
 saved_sessions.json
+agent_memory.json
 __pycache__/
 *.pyc
 .DS_Store
